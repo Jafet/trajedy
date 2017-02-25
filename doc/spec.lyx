@@ -111,6 +111,13 @@ langname{}
  the pointer or perform input/output.
  It is similar to Befunge in this way, except that the pointer moves continuousl
 y and non-orthogonal directions are possible.
+ The instruction symbols (
+\family typewriter
+,./
+\backslash
+
+\family default
+) are similar to their counterparts in PATH.
 \end_layout
 
 \begin_layout Subsection*
@@ -188,7 +195,7 @@ a)
 
 \begin_layout Plain Layout
 \begin_inset Graphics
-	filename ../../spinous/doc/enter-edge.svg
+	filename enter-edge.svg
 	BoundingBox 0bp 0bp 76bp 76bp
 
 \end_inset
@@ -212,7 +219,7 @@ b)
 
 \begin_layout Plain Layout
 \begin_inset Graphics
-	filename ../../spinous/doc/enter-corner.svg
+	filename enter-corner.svg
 
 \end_inset
 
@@ -235,7 +242,7 @@ c)
 
 \begin_layout Plain Layout
 \begin_inset Graphics
-	filename ../../spinous/doc/no-edge.svg
+	filename no-edge.svg
 
 \end_inset
 
@@ -385,7 +392,11 @@ end{samepage}
 \end_layout
 
 \begin_layout Itemize
-If the square has a period (.), the pointer changes to 
+If the square has a period (
+\family typewriter
+.
+\family default
+), the pointer changes to 
 \emph on
 output
 \emph default
@@ -397,7 +408,11 @@ output
 \end_layout
 
 \begin_layout Itemize
-If the square has a comma (,), the pointer changes to 
+If the square has a comma (
+\family typewriter
+,
+\family default
+), the pointer changes to 
 \emph on
 input
 \emph default
@@ -419,8 +434,16 @@ TODO{EOF handling}
 \end_layout
 
 \begin_layout Itemize
-If the square has a forward (/) or backward slash (
+If the square has a forward (
+\family typewriter
+/
+\family default
+) or backward slash (
+\family typewriter
+
 \backslash
+
+\family default
 ), it is treated like a two-sided mirror between the appropriate corners
  of the square.
  If the pointer's path intersects this mirror, it changes direction by reflectin
