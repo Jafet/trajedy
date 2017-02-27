@@ -874,8 +874,11 @@ struct ProgramArea: Gtk::Layout {
 
         // Program pointer.
         if (debug_state.state.ptr.is_along_edge()) {
-            // Pointer is invalid
+            // Bad pointer
             cairo->set_source_rgb(0.8, 0.2, 0.0);
+        } else if (!debug_state.state.pointer_in_range()) {
+            // Pointer outside program area
+            cairo->set_source_rgb(0.5, 0.5, 0.5);
         } else {
             cairo->set_source_rgb(0.2, 0.5, 0.0);
         }
@@ -930,15 +933,22 @@ struct MainWindow: Gtk::Window {
     Gtk::Box control_panels;
     Gtk::Paned display_panels;
     Gtk::Paned buffer_panels;
-    Gtk::Box control_bar;
 
+    Gtk::Box control_bar;
+    // dynamic label, set by update_step_counter
     Gtk::Label control_bar_label;
     Gtk::Button reset;
     Gtk::Button undo;
     Gtk::ToggleButton stop;
     Gtk::Button step;
     Gtk::ToggleButton run;
-    Gtk::HSeparator control_bar_hsep;
+    Gtk::Separator control_bar_hsep;
+
+    double run_delay; // seconds
+    Gtk::Box run_delay_bar;
+    Gtk::Label run_delay_label;
+    Gtk::Entry run_delay_entry; // display in milliseconds
+    Gtk::Label run_delay_unit;
 
     // NB: needed by program_area constructor
     Gtk::ScrolledWindow program_area_scroll;
@@ -964,15 +974,15 @@ struct MainWindow: Gtk::Window {
     // Handle to stop running program in background
     sigc::connection background_runner;
 
-    std::function <void(void)> update_step_counter;
+    std::function <void(void)> update_step_counter; // updates control_bar_label
 
     MainWindow(TState state):
         main_panels {Gtk::ORIENTATION_HORIZONTAL},
-        control_panels {Gtk::ORIENTATION_VERTICAL, 0},
+        control_panels {Gtk::ORIENTATION_VERTICAL, 5},
         display_panels {Gtk::ORIENTATION_VERTICAL},
         buffer_panels {Gtk::ORIENTATION_VERTICAL},
-        control_bar {Gtk::ORIENTATION_HORIZONTAL, 5},
 
+        control_bar {Gtk::ORIENTATION_HORIZONTAL, 5},
         control_bar_label {"Program steps: 0"},
         reset {"«"},
         undo {"◀"},
@@ -980,6 +990,11 @@ struct MainWindow: Gtk::Window {
         step {"▶"},
         // ⏩ is better, but may not be in the font
         run {"»"},
+
+        run_delay {0.0},
+        run_delay_bar {Gtk::ORIENTATION_HORIZONTAL, 5},
+        run_delay_label {"Step delay"},
+        run_delay_unit {"ms"},
 
         program_area {
             state,
@@ -1138,7 +1153,12 @@ struct MainWindow: Gtk::Window {
                     if (stop.get_active()) {
                         background_runner.disconnect();
                     } else {
-                        background_runner = Glib::signal_idle().connect(step_program);
+                        if (run_delay == 0) {
+                            background_runner = Glib::signal_idle().connect(step_program);
+                        } else {
+                            background_runner =
+                                Glib::signal_timeout().connect(step_program, run_delay * 1000);
+                        }
                     }
                 }
             });
@@ -1162,14 +1182,64 @@ struct MainWindow: Gtk::Window {
                     // The preceding condition avoids recursion.
                     stop.set_active(!run.get_active());
                     if (run.get_active()) {
-                        background_runner = Glib::signal_idle().connect(step_program);
+                        if (run_delay == 0) {
+                            background_runner = Glib::signal_idle().connect(step_program);
+                        } else {
+                            background_runner =
+                                Glib::signal_timeout().connect(step_program, run_delay * 1000);
+                        }
                     } else {
                         background_runner.disconnect();
                     }
                 }
             });
         control_bar.pack_start(run);
-        control_panels.pack_start(control_bar_hsep);
+        control_panels.pack_start(control_bar_hsep, Gtk::PACK_SHRINK);
+
+        // Run delay bar
+        run_delay_bar.pack_start(run_delay_label, Gtk::PACK_SHRINK);
+        run_delay_bar.pack_start(run_delay_entry);
+        run_delay_entry.set_alignment(1.0); // align right
+        run_delay_entry.set_input_purpose(Gtk::INPUT_PURPOSE_NUMBER);
+        run_delay_bar.pack_start(run_delay_unit, Gtk::PACK_SHRINK);
+        control_panels.pack_start(run_delay_bar, Gtk::PACK_SHRINK);
+
+        run_delay_entry.set_text(Glib::ustring::format(run_delay * 1000));
+        auto update_run_delay = [&]() {
+            // FIXME: this suppresses a pango assertion failure, but why?
+            run_delay_entry.set_position(0);
+            // check value
+            std::size_t pos;
+            try {
+                double val = std::stod(run_delay_entry.get_text().raw(), &pos);
+                const double sensible_upper_limit = 10e3; // 10s
+                if (val >= 0 && val <= sensible_upper_limit) {
+                    run_delay = val / 1000;
+                    if (run.get_active()) {
+                        // Adjust program's step scheduler
+                        background_runner.disconnect();
+                        if (run_delay == 0) {
+                            background_runner = Glib::signal_idle().connect(step_program);
+                        } else {
+                            background_runner =
+                                Glib::signal_timeout().connect(step_program, run_delay * 1000);
+                        }
+                    }
+                    // done
+                    return;
+                }
+            } catch(const std::invalid_argument&) {
+            } catch(const std::out_of_range&) {
+            }
+            // invalid value; reset it
+            run_delay_entry.set_text(Glib::ustring::format(run_delay * 1000));
+        };
+        run_delay_entry.signal_focus_out_event().connect
+            ([&, update_run_delay](GdkEventFocus*) -> bool {
+                update_run_delay();
+                return true;
+            });
+        run_delay_entry.signal_activate().connect(update_run_delay);
 
         // Display panel
         display_panels.pack1(program_area_scroll, Gtk::EXPAND);
