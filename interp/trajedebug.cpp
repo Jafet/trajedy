@@ -4,12 +4,14 @@
 
 #include <algorithm>
 #include <cassert>
+#include <codecvt>
 #include <cstdlib>
 #include <numeric>
 #include <deque>
 #include <fstream>
 #include <gmpxx.h>
 #include <iostream>
+#include <locale>
 #include <sstream>
 #include <string>
 #include <tuple>
@@ -33,7 +35,7 @@
 #include "program_option.hpp"
 
 // Draw program area.
-struct ProgramArea: Gtk::Layout {
+struct ProgramView: Gtk::Layout {
     DebugState debug_state;
 
     // Display parameters
@@ -41,23 +43,28 @@ struct ProgramArea: Gtk::Layout {
     double grid_line_px; // screen pixels
 
     std::string font_family;
-    std::string newline_sym;
+    Glib::ustring newline_sym;
     double text_margin; // fraction of square
 
     double pointer_length; // fraction of square
     double path_line_px;
     std::size_t history_path_length;
 
-    // should be provided by ScrolledWindow
+    // Should be provided by containing ScrolledWindow
     Glib::RefPtr <Gtk::Adjustment> hadjustment, vadjustment;
 
-    ProgramArea(TState state,
+    // Cached
+    // FIXME: handle encoding errors
+    std::wstring_convert <std::codecvt_utf8 <TChar>, TChar> utf8_convert;
+
+    ProgramView(TState state,
                 Glib::RefPtr <Gtk::Adjustment> hadjustment,
                 Glib::RefPtr <Gtk::Adjustment> vadjustment):
         debug_state {state},
         square_size {32.0},
         grid_line_px {2.0},
 
+        // monospace isn't necessary, but makes sizing easier
         font_family {"monospace"},
         newline_sym {"↵"},
         text_margin {0.1},
@@ -185,9 +192,8 @@ struct ProgramArea: Gtk::Layout {
                 // A beacon; show (dashed) line to target beacon
                 TPointer ptr0 = state.ptr;
                 auto target = state.turn_beacon(c);
-                // That should have been a no-op
-                //assert (ptr0 == state.ptr);
-                if (std::get<1>(target) != v2 <long> {-1, -1}) {
+                const v2 <long>& beacon = std::get<1>(target);
+                if (beacon != v2 <long> {-1, -1}) {
                     cairo->set_source_rgb(0.8, 0.8, 0.0);
                     cairo->set_dash(dash_length, 0.0);
                     cairo->move_to(pointer_pos.x, pointer_pos.y);
@@ -195,6 +201,7 @@ struct ProgramArea: Gtk::Layout {
                                    std::get<0>(target).y.get_d());
                     cairo->stroke();
                     cairo->set_dash(std::vector <double> {}, 0.0);
+                    highlight_around_square(beacon.x, beacon.y);
                 }
             }
         }
@@ -209,26 +216,27 @@ struct ProgramArea: Gtk::Layout {
         cairo->get_font_extents(extents);
         for (std::size_t y = 0; y < rows; ++y) {
             for (std::size_t x = 0; x < cols; ++x) {
-                std::string ch = { debug_state.state.squares[y][x] };
+                TChar c {debug_state.state.squares[y][x]};
+                Glib::ustring c_utf8 {utf8_convert.to_bytes(c)};
                 // Special characters.
-                if (ch[0] == TState::mirror1) {
+                if (c == TState::mirror1) {
                     cairo->move_to(x, y + 1);
                     cairo->line_to(x + 1, y);
                     cairo->stroke();
-                } else if (ch[0] == TState::mirror2) {
+                } else if (c == TState::mirror2) {
                     cairo->move_to(x, y);
                     cairo->line_to(x + 1, y + 1);
                     cairo->stroke();
                 } else {
-                    if (ch[0] == TState::newline) {
-                        ch = newline_sym;
-                    } else if (ch[0] == TState::space) {
+                    if (c == TState::newline) {
+                        c_utf8 = newline_sym;
+                    } else if (c == TState::space) {
                         // get_text_extents doesn't work for whitespace, just skip it
                         continue;
                     }
                     cairo->move_to(x + text_margin,
                                    y + 1 - text_margin - extents.descent);
-                    cairo->show_text(ch);
+                    cairo->show_text(c_utf8);
                     cairo->fill();
                 }
             }
@@ -314,7 +322,7 @@ struct MainWindow: Gtk::Window {
 
     // NB: needed by program_area constructor
     Gtk::ScrolledWindow program_area_scroll;
-    ProgramArea program_area;
+    ProgramView program_area;
     TState state0; // reset target
 
     Gtk::Box input_view_box;
@@ -387,14 +395,21 @@ struct MainWindow: Gtk::Window {
             buffer->insert_with_tag
                 (buffer->end(),
                  Glib::ustring {
-                    program_area.debug_state.past_input.begin(),
-                    program_area.debug_state.past_input.end() },
+                    program_area.utf8_convert.to_bytes(
+                        std::basic_string <TChar> {
+                            program_area.debug_state.past_input.begin(),
+                            program_area.debug_state.past_input.end() })
+                    },
                  greyed_out_tag);
 
             // Remaining input
             buffer->insert(buffer->end(),
-                           Glib::ustring {program_area.debug_state.input.begin(),
-                                          program_area.debug_state.input.end()});
+                           Glib::ustring {
+                               program_area.utf8_convert.to_bytes(
+                                   std::basic_string <TChar> {
+                                       program_area.debug_state.input.begin(),
+                                       program_area.debug_state.input.end() })
+                           });
             buffer->end_user_action();
 
             input_view_callback.unblock();
@@ -404,14 +419,21 @@ struct MainWindow: Gtk::Window {
             buffer->begin_user_action();
             buffer->erase(buffer->begin(), buffer->end());
             buffer->insert(buffer->end(),
-                           Glib::ustring {program_area.debug_state.output.begin(),
-                                          program_area.debug_state.output.end()});
+                           Glib::ustring {
+                               program_area.utf8_convert.to_bytes(
+                                   std::basic_string <TChar> {
+                                       program_area.debug_state.output.begin(),
+                                       program_area.debug_state.output.end() })
+                           });
 
             buffer->insert_with_tag
                 (buffer->end(),
                  Glib::ustring {
-                    program_area.debug_state.future_output.begin(),
-                    program_area.debug_state.future_output.end() },
+                     program_area.utf8_convert.to_bytes(
+                         std::basic_string <TChar> {
+                             program_area.debug_state.future_output.begin(),
+                             program_area.debug_state.future_output.end() })
+                 },
                  greyed_out_tag);
             buffer->end_user_action();
         };
@@ -642,8 +664,10 @@ struct MainWindow: Gtk::Window {
                 }
                 program_area.debug_state.input.clear();
                 Glib::ustring new_input = buffer->get_text(begin, end);
-                program_area.debug_state.input.insert(program_area.debug_state.input.begin(),
-                                                      new_input.begin(), new_input.end());
+                std::basic_string <TChar> input_chars =
+                    program_area.utf8_convert.from_bytes(new_input.raw());
+                program_area.debug_state.input.insert(program_area.debug_state.input.end(),
+                                                      input_chars.begin(), input_chars.end());
 
                 // Invalidate all of future_output. This is very conservative
                 // but we don't know which of it is still valid.
@@ -675,9 +699,9 @@ int main(int argc, char** argv) {
     auto gtkApp = Gtk::Application::create(argc, argv, "",
                       Gio::APPLICATION_NON_UNIQUE | Gio::APPLICATION_HANDLES_COMMAND_LINE);
 
-    std::basic_istream <TChar>* prog_file = &std::cin;
+    std::istream* prog_file = &std::cin;
     std::string prog_filename = "-";
-    std::basic_istream <TChar>* input_file = nullptr;
+    std::istream* input_file = nullptr;
     std::string input_filename = "";
     option_parser opt_parser;
     opt_parser
@@ -718,7 +742,7 @@ int main(int argc, char** argv) {
     }
 
     if (prog_filename != "-") {
-        prog_file = new std::basic_ifstream <TChar> {prog_filename};
+        prog_file = new std::ifstream {prog_filename};
         if (!*prog_file) {
             std::cerr << "Failed to open file: " << prog_filename << "\n";
             std::exit(1);
@@ -730,25 +754,26 @@ int main(int argc, char** argv) {
     } else if (input_filename == "-") {
         input_file = &std::cin;
     } else {
-        input_file = new std::basic_ifstream <TChar> {input_filename};
+        input_file = new std::ifstream {input_filename};
         if (!*input_file) {
             std::cerr << "Failed to open file: " << input_filename << "\n";
             std::exit(1);
         }
     }
 
-    std::basic_string <TChar> prog_text;
+    std::wstring_convert <std::codecvt_utf8 <TChar>, TChar> utf8_convert;
+    std::string prog_text;
     {
-        TChar c;
+        char c;
         while (prog_file->get(c)) {
             prog_text += c;
         }
     }
-    TState state(prog_text);
+    TState state(utf8_convert.from_bytes(prog_text));
 
     std::string input_text;
     if (input_file) {
-        TChar c;
+        char c;
         while (input_file->get(c)) {
             input_text += c;
         }

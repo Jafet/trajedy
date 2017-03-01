@@ -14,16 +14,16 @@ TRAJEDEBUG_LDFLAGS=$(LDFLAGS) $(or $(shell pkg-config --libs $(TRAJEDEBUG_PKG_DE
 
 all: trajedy trajedebug
 
-trajedy.o: trajedy.cpp v2.hpp
+trajedy.o: trajedy.cpp v2.hpp interp.hpp
 	$(CXX) $< -c -o $@ $(CXXFLAGS) $(TRAJEDY_INCLUDE)
 
 trajedy: trajedy.o interp.o
 	$(CXX) $^ -o $@ $(TRAJEDY_LDFLAGS)
 
-interp.o: interp.cpp v2.hpp
+interp.o: interp.cpp v2.hpp interp.hpp
 	$(CXX) $< -c -o $@ $(CXXFLAGS) $(INCLUDE)
 
-trajedebug.o: trajedebug.cpp v2.hpp
+trajedebug.o: trajedebug.cpp v2.hpp interp.hpp
 	$(CXX) $< -c -o $@ $(CXXFLAGS) $(TRAJEDEBUG_INCLUDE)
 
 trajedebug: trajedebug.o interp.o

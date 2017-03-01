@@ -69,12 +69,18 @@ struct TPointer
         return (x_on_edge() && direction.x == 0) ||
                (y_on_edge() && direction.y == 0);
     }
+
+    bool operator==(const TPointer& p) {
+        return (position == p.position &&
+                current_square == p.current_square &&
+                direction == p.direction);
+    }
 };
 
 /*
  * Trajedy program state, including pointer, mode and program area.
  */
-using TChar = char; // TODO
+using TChar = char32_t;
 struct TState {
     static const TChar
         newline = '\n',

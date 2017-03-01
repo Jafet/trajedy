@@ -4,10 +4,13 @@
 
 #include <algorithm>
 #include <cassert>
+#include <codecvt>
 #include <cstdlib>
 #include <fstream>
 #include <gmpxx.h>
 #include <iostream>
+#include <iterator>
+#include <locale>
 #include <sstream>
 #include <string>
 #include <tuple>
@@ -27,15 +30,19 @@ std::ostream& debug() {
     }
 }
 
+/*
+ * Note: we currently do all I/O (not just reading the program text) in UTF-8,
+ * ignoring the user's locale. Most users probably have a UTF-8 locale anyway.
+ */
 int main(int argc, char** argv) {
     auto dump_pointer = [](const TPointer& ptr) {
         debug() << ptr.position << "[in " << ptr.current_square << "] + "
                 << ptr.direction << "\n";
     };
 
-    std::basic_istream <TChar>* prog_file = &std::cin;
+    std::istream* prog_file = &std::cin;
     std::string prog_filename = "-";
-    std::basic_istream <TChar>* input_file = &std::cin;
+    std::istream* input_file = &std::cin;
     std::string input_filename = "-";
     option_parser opt_parser;
     opt_parser
@@ -78,30 +85,37 @@ int main(int argc, char** argv) {
         }
     }
 
-    if (prog_filename != std::string("-")) {
-        prog_file = new std::basic_ifstream <TChar> {prog_filename};
+    if (prog_filename != "-") {
+        prog_file = new std::ifstream {prog_filename};
         if (!*prog_file) {
             std::cerr << "Failed to open file: " << prog_filename << "\n";
             std::exit(1);
         }
     }
 
-    if (input_filename != std::string("-")) {
-        input_file = new std::basic_ifstream <TChar> {input_filename};
+    if (input_filename != "-") {
+        input_file = new std::ifstream {input_filename};
         if (!*input_file) {
             std::cerr << "Failed to open file: " << input_filename << "\n";
             std::exit(1);
         }
     }
 
-    std::basic_string <TChar> prog_text;
-    {
-        TChar c;
-        while (prog_file->get(c)) {
-            prog_text += c;
-        }
+    /*
+     * XXX: GCC 6 may have a bug where converting cin.rdbuf() does not work.
+     * We work around it by opening /dev/stdin instead.
+     */
+    if (input_filename == "-") {
+        input_file = new std::ifstream {"/dev/stdin"};
     }
-    TState state(prog_text);
+    std::wstring_convert <std::codecvt_utf8 <TChar>, TChar> utf8_convert;
+    std::wbuffer_convert <std::codecvt_utf8 <TChar>, TChar> buf_w {input_file->rdbuf()};
+    std::basic_istream <TChar> input_w {&buf_w};
+
+    std::string prog_bytes
+        { std::istream_iterator <char> {*prog_file >> std::noskipws}, {} };
+    std::basic_string <TChar> prog_chars = utf8_convert.from_bytes(prog_bytes);
+    TState state(prog_chars);
 
     debug() << "Program text (newlines denoted by NL):\n";
     for (auto const& row: state.squares) {
@@ -109,7 +123,7 @@ int main(int argc, char** argv) {
             if (c == TState::newline) {
                 debug() << "NL ";
             } else {
-                debug() << '[' << c << ']';
+                debug() << '[' << utf8_convert.to_bytes(c) << ']';
             }
         }
         debug() << '\n';
@@ -145,16 +159,20 @@ int main(int argc, char** argv) {
         }
         else if (state.mode == TState::InputMode) {
             TChar c;
-            if (!input_file->get(c)) {
+            if (!input_w.get(c)) {
+                debug() << "EOF reached\n";
                 c = 0;
             }
             state.current_square() = c;
-            debug() << "Input: [" << c << "]\n";
+            std::string c_utf8 = utf8_convert.to_bytes(c);
+            debug() << "Input: [" << c_utf8 << "]\n";
             state.mode = TState::NormalMode;
         }
         else if (state.mode == TState::OutputMode) {
-            std::cout << state.current_square();
-            debug() << "Output: [" << state.current_square() << "]\n";
+            TChar c = state.current_square();
+            std::string c_utf8 = utf8_convert.to_bytes(c);
+            std::cout << c_utf8;
+            debug() << "Output: [" << c_utf8 << "]\n";
             state.mode = TState::NormalMode;
         }
     }
