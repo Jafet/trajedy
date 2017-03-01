@@ -1423,7 +1423,7 @@ These let us selectively prepend a 0 or 1 bit to the binary digits of the
 \end_inset
 
 .
- Retreiving the bits from 
+ Retrieving the bits from 
 \begin_inset Formula $x$
 \end_inset
 
