@@ -88,7 +88,13 @@ struct TState {
         period  = '.',
         mirror1 = '/',
         mirror2 = '\\',
-        space   = ' ';
+        space   = ' ',
+        question_mark = '?',
+        EOI     = -1, // this “should” work
+        comma_target = 'I',
+        period_target = 'O',
+        question_target = 'Q',
+        EOI_target = '$';
 
     // Grid of instructions.
     // squares always has at least one row; this makes things easier.
@@ -102,6 +108,7 @@ struct TState {
         NormalMode,
         InputMode,
         OutputMode,
+        SpecialCharMode,
     };
 
     Mode mode;

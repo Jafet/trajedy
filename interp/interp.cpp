@@ -322,7 +322,9 @@ const TChar
     TState::period,
     TState::mirror1,
     TState::mirror2,
-    TState::space;
+    TState::space,
+    TState::EOI,
+    TState::EOI_target;
 
 /*
  * Debugging backend.
@@ -348,6 +350,8 @@ void DebugState::step() {
                 state.mode = TState::InputMode;
             } else if (op == TState::period) {
                 state.mode = TState::OutputMode;
+            } else if (op == TState::question_mark) {
+                state.mode = TState::SpecialCharMode;
             } else {
                 state.turn_beacon(op);
             }
@@ -355,7 +359,7 @@ void DebugState::step() {
         else if (state.mode == TState::InputMode) {
             change.old_char = state.current_square();
             if (input.empty()) {
-                state.current_square() = TChar(0);
+                state.current_square() = TState::EOI;
             } else {
                 state.current_square() = input.front();
                 past_input.push_back(input.front());
@@ -364,16 +368,34 @@ void DebugState::step() {
             state.mode = TState::NormalMode;
         }
         else if (state.mode == TState::OutputMode) {
-            change.output_char = state.current_square();
-            output.push_back(change.output_char);
-            if (!future_output.empty()) {
-                future_output.pop_front();
+            TChar c = state.current_square();
+            if (c != TState::EOI) {
+                change.output_char = c;
+                output.push_back(change.output_char);
+                if (!future_output.empty()) {
+                    future_output.pop_front();
+                }
+            }
+            state.mode = TState::NormalMode;
+        }
+        else if (state.mode == TState::SpecialCharMode) {
+            TChar c = state.current_square();
+            if (c == TState::comma) {
+                state.turn_beacon(TState::comma_target);
+            } else if (c == TState::period) {
+                state.turn_beacon(TState::period_target);
+            } else if (c == TState::question_mark) {
+                state.turn_beacon(TState::question_target);
+            } else if (c == TState::EOI) {
+                state.turn_beacon(TState::EOI_target);
             }
             state.mode = TState::NormalMode;
         }
     }
 
-    ++state.ptr;
+    if (!state.ptr.is_along_edge()) {
+        ++state.ptr;
+    }
     undos.push_back(change);
 }
 
@@ -383,7 +405,7 @@ void DebugState::unstep() {
         TChange& change = undos.back();
         state.ptr = change.old_ptr;
         if (change.old_mode == TState::InputMode) {
-            if (state.current_square() == TChar(0)) {
+            if (state.current_square() == TState::EOI) {
                 // was EOF
                 state.current_square() = change.old_char;
             } else {

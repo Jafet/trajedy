@@ -130,6 +130,7 @@ int main(int argc, char** argv) {
     }
 
     dump_pointer(state.ptr);
+    // FIXME: should share code with DebugState::step
     for (;;) {
         if (state.ptr.is_along_edge()) {
             debug() << "Pointer along edge, aborting.\n";
@@ -153,26 +154,48 @@ int main(int argc, char** argv) {
                 state.mode = TState::InputMode;
             } else if (op == TState::period) {
                 state.mode = TState::OutputMode;
+            } else if (op == TState::question_mark) {
+                state.mode = TState::SpecialCharMode;
             } else {
+                std::string op_utf8 = utf8_convert.to_bytes(op);
+                debug() << "Beacon: [" << op_utf8 << "]\n";
                 state.turn_beacon(op);
             }
         }
         else if (state.mode == TState::InputMode) {
             TChar c;
             if (!input_w.get(c)) {
-                debug() << "EOF reached\n";
-                c = 0;
+                debug() << "Input: end-of-input marker\n";
+                c = TState::EOI;
+            } else {
+                std::string c_utf8 = utf8_convert.to_bytes(c);
+                debug() << "Input: [" << c_utf8 << "]\n";
             }
             state.current_square() = c;
-            std::string c_utf8 = utf8_convert.to_bytes(c);
-            debug() << "Input: [" << c_utf8 << "]\n";
             state.mode = TState::NormalMode;
         }
         else if (state.mode == TState::OutputMode) {
             TChar c = state.current_square();
-            std::string c_utf8 = utf8_convert.to_bytes(c);
-            std::cout << c_utf8;
-            debug() << "Output: [" << c_utf8 << "]\n";
+            if (c != TState::EOI) {
+                std::string c_utf8 = utf8_convert.to_bytes(c);
+                std::cout << c_utf8;
+                debug() << "Output: [" << c_utf8 << "]\n";
+            } else {
+                debug() << "Output: end-of-input marker\n";
+            }
+            state.mode = TState::NormalMode;
+        }
+        else if (state.mode == TState::SpecialCharMode) {
+            TChar c = state.current_square();
+            if (c == TState::comma) {
+                state.turn_beacon(TState::comma_target);
+            } else if (c == TState::period) {
+                state.turn_beacon(TState::period_target);
+            } else if (c == TState::question_mark) {
+                state.turn_beacon(TState::question_target);
+            } else if (c == TState::EOI) {
+                state.turn_beacon(TState::EOI_target);
+            }
             state.mode = TState::NormalMode;
         }
     }

@@ -111,13 +111,13 @@ langname{}
  the pointer or perform input/output.
  It is similar to Befunge in this way, except that the pointer moves continuousl
 y and non-orthogonal directions are possible.
- The instruction symbols (
+ The instruction symbols 
 \family typewriter
 ,./
 \backslash
 
 \family default
-) are similar to their counterparts in PATH.
+ are similar to their counterparts in PATH.
 \end_layout
 
 \begin_layout Standard
@@ -440,7 +440,19 @@ input
 output
 \emph default
 .
- If the pointer enters a square in normal mode:
+\end_layout
+
+\begin_layout Standard
+When the program starts, the pointer is considered to be entering the top-left
+ square in normal mode.
+\end_layout
+
+\begin_layout Paragraph*
+Normal mode
+\end_layout
+
+\begin_layout Standard
+If the pointer enters a square in normal mode:
 \end_layout
 
 \begin_layout Itemize
@@ -486,6 +498,19 @@ If the square contains a comma (
 input
 \emph default
  mode and will modify the next square.
+\end_layout
+
+\begin_layout Itemize
+If the square contains a question mark (
+\family typewriter
+?
+\family default
+), the pointer changes to 
+\emph on
+special character
+\emph default
+ mode.
+ It will inspect the special character in the next square.
 \end_layout
 
 \begin_layout Itemize
@@ -564,23 +589,28 @@ begin{samepage}
 \end_layout
 
 \begin_layout Standard
-The program can perform I/O when entering a square in input or output mode:
-\end_layout
-
-\begin_layout Itemize
-If the pointer is in output mode, the square's character is output, then
- the pointer returns to normal mode.
+The program can perform I/O when entering a square in input or output mode.
+ (The normal behaviour of the square's character is ignored.)
 \end_layout
 
 \begin_layout Itemize
 If the pointer is in input mode, the next character from program input is
  read and placed in the square.
  Then the pointer returns to normal mode.
+ If there is no input available, an 
+\emph on
+end-of-input marker
+\emph default
+ is placed into the square instead.
+ This marker is different from any other character and can be detected by
+ entering the special character mode.
 \end_layout
 
-\begin_layout Standard
-The normal-mode behaviour of that square is ignored while in one of these
- modes.
+\begin_layout Itemize
+If the pointer is in output mode, the square's character is output, then
+ the pointer returns to normal mode.
+ If the square contains an end-of-input marker, no output happens because
+ the marker does not correspond to any character.
 \end_layout
 
 \begin_layout Standard
@@ -599,71 +629,148 @@ end{samepage}
 
 \end_layout
 
+\begin_layout Subsubsection*
+Special character mode
+\end_layout
+
 \begin_layout Standard
-When the program starts, the pointer is considered to be entering the top-left
- square in normal mode.
+This mode allows the program to inspect input characters that happen to
+ be one of the mode-switching characters (
+\family typewriter
+.,?
+\family default
+), or the end-of-input marker.
+\end_layout
+
+\begin_layout Standard
+If the current square has one of those characters, it is treated as a beacon
+ for the corresponding character in the table:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Tabular
+<lyxtabular version="3" rows="5" columns="2">
+<features tabularvalignment="middle">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Character
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Beacon
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+.
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+I
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+,
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+O
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+?
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Q
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+end of input
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+$
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Hence, the pointer turns towards the nearest square containing the beacon
+ character.
+\end_layout
+
+\begin_layout Standard
+For other characters, the pointer is unaffected.
 \end_layout
 
 \begin_layout Subsection*
 Known issues
-\end_layout
-
-\begin_layout Subsubsection*
-Input
-\end_layout
-
-\begin_layout Standard
-Input processing in 
-\begin_inset ERT
-status open
-
-\begin_layout Plain Layout
-
-
-\backslash
-langname{}
-\end_layout
-
-\end_inset
-
- has some problems.
- These may be fixed in a future revision of the language.
-\end_layout
-
-\begin_layout Itemize
-The only way to analyse an input character is to use it as a beacon.
- This requires programs to have a beacon for every input character.
- While this in itself is not a big problem, it makes processing difficult
- for (
-\family typewriter
-.
-\family default
-) and (
-\family typewriter
-,
-\family default
-), which are not beacons and cannot be safely inspected.
- (Mirrors and spaces are not beacons, either, but their effect on pointer
- direction can be measured.)
-\end_layout
-
-\begin_layout Itemize
-The input command cannot signal end-of-input to the program.
- The reference implementation currently sends a 
-\family typewriter
-NUL
-\family default
- character instead, but programming with this is inelegant, not least because
- programs that want to detect it must also contain a 
-\family typewriter
-NUL
-\family default
- character.
- (The graphical interpreter also does not support 
-\family typewriter
-NUL
-\family default
- characters due to a GTK+ limitation.)
 \end_layout
 
 \begin_layout Subsubsection*
@@ -1156,7 +1263,7 @@ cat
 \family typewriter
 truth
 \family default
- example programs use this construction extensively.
+ example programs rely on this construction extensively.
 \end_layout
 
 \begin_layout Subsubsection*
@@ -1167,9 +1274,9 @@ Memory
 All program memory (except for a few squares that store input characters)
  must be encoded into the pointer's motion, one way or another.
  The pointer can easily enter an unbounded number of states from a finite
- program (try tracing the 
+ program (see the 
 \family typewriter
-cat
+loop3
 \family default
  example).
  However, it is still not known whether this state space can be used for

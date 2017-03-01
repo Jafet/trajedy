@@ -44,6 +44,7 @@ struct ProgramView: Gtk::Layout {
 
     std::string font_family;
     Glib::ustring newline_sym;
+    Glib::ustring EOI_sym;
     double text_margin; // fraction of square
 
     double pointer_length; // fraction of square
@@ -67,6 +68,7 @@ struct ProgramView: Gtk::Layout {
         // monospace isn't necessary, but makes sizing easier
         font_family {"monospace"},
         newline_sym {"↵"},
+        EOI_sym {"END"},
         text_margin {0.1},
 
         pointer_length {0.5},
@@ -177,7 +179,7 @@ struct ProgramView: Gtk::Layout {
         auto& state = debug_state.state;
         if (state.pointer_in_range() && state.mode == TState::NormalMode) {
             TChar c = state.current_square();
-            if (c == TState::comma || c == TState::period) {
+            if (c == TState::comma || c == TState::period || c == TState::question_mark) {
                 // Show target square
                 if (!state.ptr.is_along_edge()) {
                     TPointer ptr2 = state.ptr;
@@ -192,6 +194,7 @@ struct ProgramView: Gtk::Layout {
                 // A beacon; show (dashed) line to target beacon
                 TPointer ptr0 = state.ptr;
                 auto target = state.turn_beacon(c);
+                state.ptr = ptr0;
                 const v2 <long>& beacon = std::get<1>(target);
                 if (beacon != v2 <long> {-1, -1}) {
                     cairo->set_source_rgb(0.8, 0.8, 0.0);
@@ -209,7 +212,8 @@ struct ProgramView: Gtk::Layout {
         // Characters in the program area.
         // This is drawn over the program path so that the
         // characters do not get too obscured.
-        cairo->set_font_size(1.0 - 2 * text_margin);
+        const double target_font_size = 1.0 - 2 * text_margin;
+        cairo->set_font_size(target_font_size);
         cairo->set_line_width(2.0 / square_size); // mirrors
         cairo->set_source_rgb(0.0, 0.0, 0.0);
         Cairo::FontExtents extents;
@@ -217,7 +221,6 @@ struct ProgramView: Gtk::Layout {
         for (std::size_t y = 0; y < rows; ++y) {
             for (std::size_t x = 0; x < cols; ++x) {
                 TChar c {debug_state.state.squares[y][x]};
-                Glib::ustring c_utf8 {utf8_convert.to_bytes(c)};
                 // Special characters.
                 if (c == TState::mirror1) {
                     cairo->move_to(x, y + 1);
@@ -228,16 +231,31 @@ struct ProgramView: Gtk::Layout {
                     cairo->line_to(x + 1, y + 1);
                     cairo->stroke();
                 } else {
+                    Glib::ustring c_utf8;
                     if (c == TState::newline) {
                         c_utf8 = newline_sym;
                     } else if (c == TState::space) {
                         // get_text_extents doesn't work for whitespace, just skip it
                         continue;
+                    } else if (c == TState::EOI) {
+                        c_utf8 = EOI_sym;
+                    } else {
+                        c_utf8 = utf8_convert.to_bytes(c);
                     }
-                    cairo->move_to(x + text_margin,
+                    // Center the character horizontally, scaling to fit
+                    Cairo::TextExtents text_extents;
+                    cairo->get_text_extents(c_utf8, text_extents);
+                    double orig_width = text_extents.width - text_extents.x_bearing;
+                    double x_padding = (target_font_size - orig_width) / 2;
+                    if (orig_width > target_font_size) {
+                        cairo->set_font_size(target_font_size * target_font_size / orig_width);
+                        x_padding = 0;
+                    }
+                    cairo->move_to(x + text_margin + x_padding,
                                    y + 1 - text_margin - extents.descent);
                     cairo->show_text(c_utf8);
                     cairo->fill();
+                    cairo->set_font_size(target_font_size);
                 }
             }
         }
