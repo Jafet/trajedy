@@ -1,0 +1,23 @@
+X      / \
+/ Y   ,_ /Y ← input loop
+         
+    X   W ← x' = x/2 + bit/2
+\       /
+        W10
+        
+        
+   B   ?
+   /   \
+        
+       R ← magnify x
+         ?
+          R 
+             ← now x' = -x
+   B           
+                 ← now x' = -2x
+  A           01
+ ?            .. ← output
+A ← flip x    01
+\             / 
+?               
+\              /

@@ -29,3 +29,4 @@ libgmp-dev libgtkmm-3.0-dev libcairomm-1.0-dev
 * [`hello2`](examples/hello2.tra): compact hello world program, split over multiple lines.
 * [`truth`](examples/truth.tra): [truth-machine](https://esolangs.org/wiki/Truth-machine), demonstrating basic I/O and control flow.
 * [`cat`](examples/cat.tra): copies its input to output. The end-of-input detection makes this program rather large and complicated.
+* [`reverse01`](examples/reverse01.tra): reads a string of `0` and `1` characters, and outputs the reverse. Essentially stores a stack in the pointer state.

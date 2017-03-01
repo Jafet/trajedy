@@ -1319,6 +1319,10 @@ Some building blocks for offset transforms.
 
 \end_layout
 
+\begin_layout Paragraph*
+Storage
+\end_layout
+
 \begin_layout Standard
 Any memory storage scheme is likely to use the pointer's position rather
  than its direction, as beacons will reset the direction.
@@ -1428,6 +1432,61 @@ These let us selectively prepend a 0 or 1 bit to the binary digits of the
 \end_inset
 
  may be difficult, though.
+\end_layout
+
+\begin_layout Paragraph*
+Retrieval
+\end_layout
+
+\begin_layout Standard
+The previous transforms are not invertible (the denominator always increases),
+ which would make it difficult to read information back out of the pointer
+ offset.
+ However, we can abuse the fact that 
+\family typewriter
+?
+\family default
+ can be used to skip over instructions, allowing us to travel past pairs
+ of beacons and magnify the initial offset.
+\end_layout
+
+\begin_layout Standard
+As a demonstration, the 
+\family typewriter
+reverse01
+\family default
+ program reads in a string of 
+\family typewriter
+0
+\family default
+ and 
+\family typewriter
+1
+\family default
+ characters, then prints the string in reverse.
+ Note the transform used to pack bits (beacons named 
+\family typewriter
+W
+\family default
+) and the transform that uses 
+\family typewriter
+?
+\family default
+ to unpack them (beacons named 
+\family typewriter
+R
+\family default
+).
+ Finally, as the magnification step flips the offset, a unit magnification
+ (beacons 
+\family typewriter
+A
+\family default
+, 
+\family typewriter
+B
+\family default
+) is used to flip it back.
 \end_layout
 
 \end_body
