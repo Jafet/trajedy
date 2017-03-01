@@ -149,7 +149,7 @@ langname{}
 \end_inset
 
 .
- This makes it exceedingly difficult, if not impossible, to store and manipulate
+ This makes it very difficult, if not impossible, to store and manipulate
  data.
  It is not known whether 
 \begin_inset ERT
@@ -190,24 +190,16 @@ langname{}
  The official character encoding is UTF-8, but there is no obstacle to programmi
 ng in the ASCII subset only.
  The text is split into lines and treated as a rectangle of characters,
- and space characters are appended to shorter lines to fill out the rectangle.
+ and spaces are appended to shorter lines to fill out the rectangle.
 \end_layout
 
 \begin_layout Standard
-Note that a 
-\emph on
-line
-\emph default
- is a sequence of characters, ending with a newline character (except that
- the last line does not end with a newline), and padding spaces are added
+Note that newline characters are preserved, and padding spaces are added
  
 \emph on
 after
 \emph default
  the newlines.
- For programs that end with a newline, the reference implementation adds
- a blank line at the end; however, this has no effect on the semantics for
- any program.
 \end_layout
 
 \begin_layout Subsection*
@@ -400,7 +392,7 @@ no-edge rule
 \end_layout
 
 \begin_layout Standard
-If the pointer crosses the boundary of the program area, the program halts.
+If the pointer leaves the boundary of the program area, the program halts.
 \end_layout
 
 \begin_layout Subsubsection*
@@ -426,7 +418,11 @@ begin{samepage}
 \begin_layout Standard
 When the pointer enters a new square, it performs an action determined by
  that square's character, as well as whether the pointer is in a special
- mode.
+ 
+\emph on
+mode
+\emph default
+.
  The initial mode of the pointer is the 
 \emph on
 normal
@@ -435,15 +431,19 @@ normal
 \emph on
 input
 \emph default
- and 
+, 
 \emph on
 output
+\emph default
+ and 
+\emph on
+special-character
 \emph default
 .
 \end_layout
 
 \begin_layout Standard
-When the program starts, the pointer is considered to be entering the top-left
+When the program starts, the pointer is just about to enter the top-left
  square in normal mode.
 \end_layout
 
@@ -452,7 +452,8 @@ Normal mode
 \end_layout
 
 \begin_layout Standard
-If the pointer enters a square in normal mode:
+If the pointer enters a square in normal mode, it performs an action depending
+ on the square's character:
 \end_layout
 
 \begin_layout Itemize
@@ -526,8 +527,7 @@ If the square contains a forward (
 \family default
 ), it is treated like a two-sided mirror between the appropriate corners
  of the square.
- If the pointer's path intersects this mirror, it changes direction by reflectin
-g off the mirror.
+ If the pointer hits its surface, it reflects like a light ray.
  Pointers may reflect off the corners of mirrors, at the same angle (as
  if the mirror extends slightly past the corner).
  If the pointer is travelling on the same line as the mirror itself, its
@@ -761,11 +761,6 @@ $
 \end_layout
 
 \begin_layout Standard
-Hence, the pointer turns towards the nearest square containing the beacon
- character.
-\end_layout
-
-\begin_layout Standard
 For other characters, the pointer is unaffected.
 \end_layout
 
@@ -816,7 +811,7 @@ langname{}
 
 \end_inset
 
- can easily be implemented on any Turing machine.
+ is implementable on a Turing machine.
 \end_layout
 
 \begin_layout Standard
@@ -834,7 +829,7 @@ Infinitesimals
 \begin_layout Standard
 The pointer only needs to enter a square's (infinitesimally-thin) boundary
  to be affected by it.
- This leads to some physically unintuitive behaviour.
+ This leads to some physically unintuitive behaviour:
 \end_layout
 
 \begin_layout Itemize
@@ -994,8 +989,7 @@ tunnel
 \begin_inset Quotes erd
 \end_inset
 
- between infinitesimally small gaps between mirrors, like in the following
- program:
+ between infinitesimally small gaps between mirrors:
 \begin_inset Newline newline
 \end_inset
 
@@ -1071,8 +1065,7 @@ Newlines and padding
 \end_layout
 
 \begin_layout Standard
-Recall that each line of the program source is padded up to the width of
- the program area, but 
+Each source line is padded up to the width of the program area, but 
 \emph on
 after
 \emph default
@@ -1272,7 +1265,7 @@ Memory
 
 \begin_layout Standard
 All program memory (except for a few squares that store input characters)
- must be encoded into the pointer's motion, one way or another.
+ must be encoded into the pointer's state, one way or another.
  The pointer can easily enter an unbounded number of states from a finite
  program (see the 
 \family typewriter
