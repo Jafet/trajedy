@@ -1,2 +1,5 @@
 *#
 *~
+interp/*.o
+interp/trajedy
+interp/trajedebug
