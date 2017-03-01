@@ -177,34 +177,67 @@ struct ProgramView: Gtk::Layout {
         v2 <double> pointer_pos {debug_state.state.ptr.position.x.get_d(),
                                  debug_state.state.ptr.position.y.get_d()};
         auto& state = debug_state.state;
-        if (state.pointer_in_range() && state.mode == TState::NormalMode) {
+        if (state.pointer_in_range()) {
             TChar c = state.current_square();
-            if (c == TState::comma || c == TState::period || c == TState::question_mark) {
-                // Show target square
-                if (!state.ptr.is_along_edge()) {
-                    TPointer ptr2 = state.ptr;
-                    ++ptr2;
-                    cairo->set_source_rgb(0.5, 0.5, 0.5);
-                    highlight_around_square(ptr2.current_square.x, ptr2.current_square.y);
+            if (state.mode == TState::NormalMode) {
+                if (c == TState::comma || c == TState::period || c == TState::question_mark) {
+                    // Show target square
+                    if (!state.ptr.is_along_edge()) {
+                        TPointer ptr2 = state.ptr;
+                        ++ptr2;
+                        cairo->set_source_rgb(0.5, 0.5, 0.5);
+                        highlight_around_square(ptr2.current_square.x, ptr2.current_square.y);
+                    }
+                } else if (c == TState::mirror1 || c == TState::mirror2) {
+                    // Nothing to do
+                } else if (c == TState::space) {
+                } else {
+                    // A beacon; show (dashed) line to target beacon
+                    TPointer ptr0 = state.ptr;
+                    auto target = state.turn_beacon(c);
+                    state.ptr = ptr0;
+                    const v2 <long>& beacon = std::get<1>(target);
+                    if (beacon != v2 <long> {-1, -1}) {
+                        cairo->set_source_rgb(0.8, 0.8, 0.0);
+                        cairo->set_dash(dash_length, 0.0);
+                        cairo->move_to(pointer_pos.x, pointer_pos.y);
+                        cairo->line_to(std::get<0>(target).x.get_d(),
+                                       std::get<0>(target).y.get_d());
+                        cairo->stroke();
+                        cairo->set_dash(std::vector <double> {}, 0.0);
+                        highlight_around_square(beacon.x, beacon.y);
+                    }
                 }
-            } else if (c == TState::mirror1 || c == TState::mirror2) {
-                // Nothing to do
-            } else if (c == TState::space) {
-            } else {
-                // A beacon; show (dashed) line to target beacon
-                TPointer ptr0 = state.ptr;
-                auto target = state.turn_beacon(c);
-                state.ptr = ptr0;
-                const v2 <long>& beacon = std::get<1>(target);
-                if (beacon != v2 <long> {-1, -1}) {
-                    cairo->set_source_rgb(0.8, 0.8, 0.0);
-                    cairo->set_dash(dash_length, 0.0);
-                    cairo->move_to(pointer_pos.x, pointer_pos.y);
-                    cairo->line_to(std::get<0>(target).x.get_d(),
-                                   std::get<0>(target).y.get_d());
-                    cairo->stroke();
-                    cairo->set_dash(std::vector <double> {}, 0.0);
-                    highlight_around_square(beacon.x, beacon.y);
+            } else if (state.mode == TState::SpecialCharMode) {
+                if (c == TState::comma || c == TState::period ||
+                    c == TState::question_mark || c == TState::EOI) {
+                    // Show target square
+                    TPointer ptr0 = state.ptr;
+                    TChar c_target = 0;
+                    if (c == TState::comma) {
+                        c_target = TState::comma_target;
+                    } else if (c == TState::period) {
+                        c_target = TState::period_target;
+                    } else if (c == TState::question_mark) {
+                        c_target = TState::question_target;
+                    } else if (c == TState::EOI) {
+                        c_target = TState::EOI_target;
+                    }
+                    if (c_target) {
+                        auto target = state.turn_beacon(c_target);
+                        state.ptr = ptr0;
+                        const v2 <long>& beacon = std::get<1>(target);
+                        if (beacon != v2 <long> {-1, -1}) {
+                            cairo->set_source_rgb(0.8, 0.8, 0.0);
+                            cairo->set_dash(dash_length, 0.0);
+                            cairo->move_to(pointer_pos.x, pointer_pos.y);
+                            cairo->line_to(std::get<0>(target).x.get_d(),
+                                           std::get<0>(target).y.get_d());
+                            cairo->stroke();
+                            cairo->set_dash(std::vector <double> {}, 0.0);
+                            highlight_around_square(beacon.x, beacon.y);
+                        }
+                    }
                 }
             }
         }
@@ -216,8 +249,8 @@ struct ProgramView: Gtk::Layout {
         cairo->set_font_size(target_font_size);
         cairo->set_line_width(2.0 / square_size); // mirrors
         cairo->set_source_rgb(0.0, 0.0, 0.0);
-        Cairo::FontExtents extents;
-        cairo->get_font_extents(extents);
+        Cairo::FontExtents font_extents;
+        cairo->get_font_extents(font_extents);
         for (std::size_t y = 0; y < rows; ++y) {
             for (std::size_t x = 0; x < cols; ++x) {
                 TChar c {debug_state.state.squares[y][x]};
@@ -252,7 +285,7 @@ struct ProgramView: Gtk::Layout {
                         x_padding = 0;
                     }
                     cairo->move_to(x + text_margin + x_padding,
-                                   y + 1 - text_margin - extents.descent);
+                                   y + 1 - text_margin - font_extents.descent);
                     cairo->show_text(c_utf8);
                     cairo->fill();
                     cairo->set_font_size(target_font_size);
