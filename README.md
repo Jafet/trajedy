@@ -10,9 +10,15 @@ The [esowiki](https://esolangs.org) has a [version of the specification](https:/
 
 To compile the interpreter (`trajedy`), you need a relatively modern C++ compiler and the [GNU MP library](http://gmplib.org).
 
+The interpreter uses a small library for command-line parsing, which should be fetched using `git submodule`.
+
 In addition to those, the graphical interpreter (`trajedebug`) requires [gtkmm](http://gtkmm.org) and [cairomm](http://cairographics.org/cairomm). This interpreter has basic debugging functions, and is essential if you want to see how the examples work.
 
-The included Makefile should work for GCC on a Debian-like system.
+The included Makefile should work for GCC on a Debian-like system. For Debian, the library packages are:
+
+```
+libgmp-dev libgtkmm-3.0-dev libcairomm-1.0-dev
+```
 
 ## Example programs
 
