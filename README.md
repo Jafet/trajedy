@@ -1,0 +1,25 @@
+# The Trajedy programming language
+
+This repository contains a specification document, interpreter, and example programs.
+
+## Specification
+
+The [esowiki](https://esolangs.org) has a [version of the specification](https://esolangs.org/wiki/Trajedy), which may be outdated or indated (i.e. more advanced) relative to the specification here.
+
+## Reference interpreter
+
+To compile the interpreter (`trajedy`), you need a relatively modern C++ compiler and the [GNU MP library](http://gmplib.org).
+
+In addition to those, the graphical interpreter (`trajedebug`) requires [gtkmm](http://gtkmm.org) and [cairomm](http://cairographics.org/cairomm). This interpreter has basic debugging functions, and is essential if you want to see how the examples work.
+
+The included Makefile should work for GCC on a Debian-like system.
+
+## Example programs
+
+* [`loop`](examples/loop.tra): trivial (and rather degenerate) infinite loop.
+* [`loop2`](examples/loop2.tra): less trivial triangle-shaped loop.
+* [`loop3`](examples/loop3.tra): interesting loop that goes through an infinite number of states.
+* [`hello`](examples/hello.tra): simple hello world program.
+* [`hello2`](examples/hello2.tra): compact hello world program, split over multiple lines.
+* [`truth`](examples/truth.tra): [truth-machine](https://esolangs.org/wiki/Truth-machine), demonstrating basic I/O and control flow.
+* [`cat`](examples/cat.tra): copies its input to output. The end-of-input detection makes this program rather large and complicated.
