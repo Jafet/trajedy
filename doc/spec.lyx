@@ -75,7 +75,7 @@
 
 \begin_body
 
-\begin_layout Subsection*
+\begin_layout Section*
 The 
 \begin_inset ERT
 status open
@@ -105,8 +105,8 @@ langname{}
 
 \end_inset
 
- is a 2-dimensional language that involves a pointer moving continuously
- through a square grid.
+ is a 2-dimensional language that involves a pointer moving in a straight
+ path through a square grid.
  The grid contains instruction squares that may change the direction of
  the pointer or perform input/output.
  It is similar to Befunge in this way, except that the pointer moves continuousl
@@ -118,6 +118,54 @@ y and non-orthogonal directions are possible.
 
 \family default
 ) are similar to their counterparts in PATH.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+langname{}
+\end_layout
+
+\end_inset
+
+ was conceived as an attempt to remove the memory stack from Befunge.
+ Besides the grid and the pointer's own configuration, no other program
+ memory is provided in 
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+langname{}
+\end_layout
+
+\end_inset
+
+.
+ This makes it exceedingly difficult, if not impossible, to store and manipulate
+ data.
+ It is not known whether 
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+langname{}
+\end_layout
+
+\end_inset
+
+ is Turing-complete, or, in fact, whether it provides any usable memory
+ whatsoever.
 \end_layout
 
 \begin_layout Subsection*
@@ -138,12 +186,28 @@ langname{}
 
 \end_inset
 
- program is a plain text file.
- The official character encoding is UTF-8 though implementations may also
- limit themselves to the ASCII subset.
- The text is treated as a rectangle of characters, and space characters
- are appended to shorter lines to fill out the rectangle.
- Newline characters are discarded.
+ program is written in lines of plain text.
+ The official character encoding is UTF-8, but there is no obstacle to programmi
+ng in the ASCII subset only.
+ The text is split into lines and treated as a rectangle of characters,
+ and space characters are appended to shorter lines to fill out the rectangle.
+\end_layout
+
+\begin_layout Standard
+Note that a 
+\emph on
+line
+\emph default
+ is a sequence of characters, ending with a newline character (except that
+ the last line does not end with a newline), and padding spaces are added
+ 
+\emph on
+after
+\emph default
+ the newlines.
+ For programs that end with a newline, the reference implementation adds
+ a blank line at the end; however, this has no effect on the semantics for
+ any program.
 \end_layout
 
 \begin_layout Subsection*
@@ -158,8 +222,9 @@ program area
 .
  The program area is divided into a grid of squares, with each unit square
  containing one character of the program area.
- The program pointer starts at the top-left corner of the top-left square
- and begins moving towards the bottom-right corner of that square.
+ The program pointer is a single moving point, and starts at the top-left
+ corner of the top-left square, moving towards the bottom-right corner of
+ that square.
  It keeps moving during the entire execution of the program.
 \end_layout
 
@@ -265,7 +330,7 @@ c)
 \begin_layout Plain Layout
 \begin_inset CommandInset label
 LatexCommand label
-name "fig:Crossing-square-boundaries."
+name "fig:Crossing-square-boundaries"
 
 \end_inset
 
@@ -294,7 +359,7 @@ enter
 
 \begin_inset CommandInset ref
 LatexCommand ref
-reference "fig:Crossing-square-boundaries."
+reference "fig:Crossing-square-boundaries"
 
 \end_inset
 
@@ -307,7 +372,7 @@ a).
 
 \begin_inset CommandInset ref
 LatexCommand ref
-reference "fig:Crossing-square-boundaries."
+reference "fig:Crossing-square-boundaries"
 
 \end_inset
 
@@ -322,7 +387,7 @@ The pointer is never allowed to move along the edges between squares (Fig.
 
 \begin_inset CommandInset ref
 LatexCommand ref
-reference "fig:Crossing-square-boundaries."
+reference "fig:Crossing-square-boundaries"
 
 \end_inset
 
@@ -362,17 +427,25 @@ begin{samepage}
 When the pointer enters a new square, it performs an action determined by
  that square's character, as well as whether the pointer is in a special
  mode.
- The initial mode of the pointer will be called the 
+ The initial mode of the pointer is the 
 \emph on
 normal
 \emph default
- mode.
+ mode; the other modes are 
+\emph on
+input
+\emph default
+ and 
+\emph on
+output
+\emph default
+.
  If the pointer enters a square in normal mode:
 \end_layout
 
 \begin_layout Itemize
-If the square has a space character, nothing happens and the pointer continues
- on its path.
+If the square contains a space character, nothing happens and the pointer
+ continues on its path.
 \end_layout
 
 \begin_layout Standard
@@ -392,7 +465,7 @@ end{samepage}
 \end_layout
 
 \begin_layout Itemize
-If the square has a period (
+If the square contains a period (
 \family typewriter
 .
 \family default
@@ -400,15 +473,11 @@ If the square has a period (
 \emph on
 output
 \emph default
- mode and will output the next character.
- However, this would not be able to output newlines, which are not initially
- present in the program area.
- Hence, if this square is on the rightmost boundary of the program area,
- the program immediately outputs a newline and does not change modes.
+ mode and will output from the next square.
 \end_layout
 
 \begin_layout Itemize
-If the square has a comma (
+If the square contains a comma (
 \family typewriter
 ,
 \family default
@@ -416,25 +485,11 @@ If the square has a comma (
 \emph on
 input
 \emph default
- mode.
- 
-\begin_inset ERT
-status open
-
-\begin_layout Plain Layout
-
-
-\backslash
-TODO{EOF handling}
-\end_layout
-
-\end_inset
-
-
+ mode and will modify the next square.
 \end_layout
 
 \begin_layout Itemize
-If the square has a forward (
+If the square contains a forward (
 \family typewriter
 /
 \family default
@@ -448,10 +503,10 @@ If the square has a forward (
  of the square.
  If the pointer's path intersects this mirror, it changes direction by reflectin
 g off the mirror.
- Pointers that enter the square at one of the mirror's corners are not affected
- by the mirror.
- (If they enter from any other boundary point, they can reflect off the
- corners, at the same angle as the rest of the mirror.)
+ Pointers may reflect off the corners of mirrors, at the same angle (as
+ if the mirror extends slightly past the corner).
+ If the pointer is travelling on the same line as the mirror itself, its
+ path is not changed.
 \end_layout
 
 \begin_layout Standard
@@ -473,9 +528,9 @@ nearest matching beacon; i.e.
 
 \begin_layout Standard
 Note that the pointer changes direction immediately, while it is still on
- the edge of the square being entered.
- If this causes it to move back into the square that it came from, it will
- enter that square again.
+ the edge of the beacon being entered.
+ If this causes it to move back towards the square that it came from, it
+ will enter that square again.
 \end_layout
 
 \begin_layout Standard
@@ -485,6 +540,7 @@ If the nearest beacon is in a position that would cause the pointer to move
 no-edge rule
 \emph default
  and is considered invalid.
+ (The reference implementation exits with a failure code.)
 \end_layout
 
 \begin_layout Subsubsection*
@@ -523,6 +579,11 @@ If the pointer is in input mode, the next character from program input is
 \end_layout
 
 \begin_layout Standard
+The normal-mode behaviour of that square is ignored while in one of these
+ modes.
+\end_layout
+
+\begin_layout Standard
 \begin_inset ERT
 status open
 
@@ -541,6 +602,732 @@ end{samepage}
 \begin_layout Standard
 When the program starts, the pointer is considered to be entering the top-left
  square in normal mode.
+\end_layout
+
+\begin_layout Subsection*
+Known issues
+\end_layout
+
+\begin_layout Subsubsection*
+Input
+\end_layout
+
+\begin_layout Standard
+Input processing in 
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+langname{}
+\end_layout
+
+\end_inset
+
+ has some problems.
+ These may be fixed in a future revision of the language.
+\end_layout
+
+\begin_layout Itemize
+The only way to analyse an input character is to use it as a beacon.
+ This requires programs to have a beacon for every input character.
+ While this in itself is not a big problem, it makes processing difficult
+ for (
+\family typewriter
+.
+\family default
+) and (
+\family typewriter
+,
+\family default
+), which are not beacons and cannot be safely inspected.
+ (Mirrors and spaces are not beacons, either, but their effect on pointer
+ direction can be measured.)
+\end_layout
+
+\begin_layout Itemize
+The input command cannot signal end-of-input to the program.
+ The reference implementation currently sends a 
+\family typewriter
+NUL
+\family default
+ character instead, but programming with this is inelegant, not least because
+ programs that want to detect it must also contain a 
+\family typewriter
+NUL
+\family default
+ character.
+ (The graphical interpreter also does not support 
+\family typewriter
+NUL
+\family default
+ characters due to a GTK+ limitation.)
+\end_layout
+
+\begin_layout Subsubsection*
+Unicode
+\end_layout
+
+\begin_layout Standard
+The language spec does not clearly describe how Unicode text should be handled.
+\end_layout
+
+\begin_layout Standard
+The reference implemention has some basic support for Unicode, using codepoints
+ (instead of characters).
+\end_layout
+
+\begin_layout Standard
+The main rationale for Unicode is to not exclude programs that want a huge
+ number of distinct beacons.
+ However, if Unicode causes too many problems, it could potentially be dropped.
+\end_layout
+
+\begin_layout Subsection*
+Discussion
+\end_layout
+
+\begin_layout Subsubsection*
+Implementation
+\end_layout
+
+\begin_layout Standard
+The initial position and direction of the pointer, as well as all subsequent
+ states, can be represented by Cartesian coordinates with rational numbers.
+ Hence, 
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+langname{}
+\end_layout
+
+\end_inset
+
+ can easily be implemented on any Turing machine.
+\end_layout
+
+\begin_layout Standard
+The beacons are the only program elements to have non-local behaviour.
+ Even this can be avoided by using, for example, Voronoi regions to pre-calculat
+e the nearest beacon for every point.
+ However, dynamic beacons (created in input mode) still entail non-local
+ control flow.
+\end_layout
+
+\begin_layout Subsubsection*
+Infinitesimals
+\end_layout
+
+\begin_layout Standard
+The pointer only needs to enter a square's (infinitesimally-thin) boundary
+ to be affected by it.
+ This leads to some physically unintuitive behaviour.
+\end_layout
+
+\begin_layout Itemize
+In the following program, the pointer moves to the corner between the X
+ beacons, then bounces between the beacons indefinitely.
+ However, it does not move any nonzero distance.
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset Tabular
+<lyxtabular version="3" rows="3" columns="3">
+<features tabularvalignment="middle">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\searrow$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+X
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+X
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+Mirrors extend to the corners of their squares.
+ However, the pointer must actually enter a mirror's square to be affected
+ by it.
+ Hence, pointers can 
+\begin_inset Quotes eld
+\end_inset
+
+tunnel
+\begin_inset Quotes erd
+\end_inset
+
+ between infinitesimally small gaps between mirrors, like in the following
+ program:
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset Tabular
+<lyxtabular version="3" rows="2" columns="2">
+<features tabularvalignment="middle">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\searrow$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\mathtt{\diagup}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\mathtt{\diagup}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection*
+Newlines and padding
+\end_layout
+
+\begin_layout Standard
+Recall that each line of the program source is padded up to the width of
+ the program area, but 
+\emph on
+after
+\emph default
+ the newline character.
+ This means that trailing whitespace may be significant.
+ A short source line will place a newline square away from the program area's
+ right edge, and it can act as a beacon.
+ Placing newlines this way is also the only way to output newlines without
+ ending the program.
+\end_layout
+
+\begin_layout Subsubsection*
+Control flow
+\end_layout
+
+\begin_layout Standard
+A simple scheme for control flow is to constrain the pointer to move in
+ orthogonal directions, i.e.
+ parallel to the square grid lines.
+ Orthogonal pointers remain orthogonal when reflected by mirrors; they also
+ do not drift across rows or columns.
+ A device for setting this up at the beginning of the program is
+\end_layout
+
+\begin_layout Standard
+\begin_inset Tabular
+<lyxtabular version="3" rows="2" columns="5">
+<features tabularvalignment="middle">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+X
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+Y
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+…
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+Y
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+X
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+\begin_inset space ~
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+which causes the pointer to move horizontally towards the second 
+\family typewriter
+Y
+\family default
+.
+\end_layout
+
+\begin_layout Standard
+When designing an orthogonal-flowing program, beacons should be placed on
+ the same row or column, and the pointer should be directed to beacon edges
+ within that row or column.
+ This preserves the orthogonal flow (or even resets a non-orthogonal pointer).
+ The 
+\family typewriter
+cat
+\family default
+ and 
+\family typewriter
+truth
+\family default
+ example programs use this construction extensively.
+\end_layout
+
+\begin_layout Subsubsection*
+Memory
+\end_layout
+
+\begin_layout Standard
+All program memory (except for a few squares that store input characters)
+ must be encoded into the pointer's motion, one way or another.
+ The pointer can easily enter an unbounded number of states from a finite
+ program (try tracing the 
+\family typewriter
+cat
+\family default
+ example).
+ However, it is still not known whether this state space can be used for
+ general storage.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename beacon-transforms.svg
+	height 8em
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:Beacon-transforms"
+
+\end_inset
+
+Some building blocks for offset transforms.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Any memory storage scheme is likely to use the pointer's position rather
+ than its direction, as beacons will reset the direction.
+ Suppose that information is encoded in a position offset 
+\begin_inset Formula $x$
+\end_inset
+
+, 
+\begin_inset Formula $0<x<1$
+\end_inset
+
+ (see Fig.
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:Beacon-transforms"
+
+\end_inset
+
+).
+ By pointing it at a beacon at distance 
+\begin_inset Formula $\left(a,b\right)$
+\end_inset
+
+, then redirecting the pointer after it has travelled 
+\begin_inset Formula $c$
+\end_inset
+
+ squares, we can transform the offset 
+\begin_inset Formula $x$
+\end_inset
+
+:
+\end_layout
+
+\begin_layout Itemize
+If 
+\begin_inset Formula $c$
+\end_inset
+
+ is along 
+\begin_inset Formula $b$
+\end_inset
+
+: 
+\begin_inset Formula $x\rightarrow\frac{c\left(a+x\right)}{b}\mod1$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+If 
+\begin_inset Formula $c$
+\end_inset
+
+ is along 
+\begin_inset Formula $a$
+\end_inset
+
+ and 
+\begin_inset Formula $x$
+\end_inset
+
+: 
+\begin_inset Formula $x\rightarrow\frac{b\left(c+x\right)}{a+x}\mod1$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Interesting special cases:
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Formula $a=0,b=2,c=1$
+\end_inset
+
+: 
+\begin_inset Formula $x\rightarrow\frac{x}{2}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Formula $a=1,b=2,c=1$
+\end_inset
+
+: 
+\begin_inset Formula $x\rightarrow\frac{x}{2}+\frac{1}{2}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+These let us selectively prepend a 0 or 1 bit to the binary digits of the
+ offset 
+\begin_inset Formula $x$
+\end_inset
+
+.
+ Retreiving the bits from 
+\begin_inset Formula $x$
+\end_inset
+
+ may be difficult, though.
 \end_layout
 
 \end_body
