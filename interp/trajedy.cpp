@@ -157,7 +157,10 @@ int main(int argc, char** argv) {
             } else if (op == TState::question_mark) {
                 state.mode = TState::SpecialCharMode;
             } else {
-                std::string op_utf8 = utf8_convert.to_bytes(op);
+                std::string op_utf8 =
+                    op == TState::EOI?
+                        "end-of-input"
+                      : utf8_convert.to_bytes(op);
                 debug() << "Beacon: [" << op_utf8 << "]\n";
                 state.turn_beacon(op);
             }
