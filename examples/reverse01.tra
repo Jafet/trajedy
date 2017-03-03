@@ -1,23 +1,32 @@
-X      / \
-/ Y   ,_ /Y ← input loop
-         
-    X   W ← x' = x/2 + bit/2
-\       /
-        W10
+X       / \
+/ Y    ,_ /Y ← input loop
+          
+    X    W ← x' = x/2 + bit/2
+\        /
+         W10
+        G ← prepare to merge; x' = x/2 + 1/2
+            NB. merge device = GHIJ
+       H
         
-        
-   B   ?
-   /   \
-        
-       R ← magnify x
-         ?
-          R 
-             ← now x' = -x
-   B           
-                 ← now x' = -2x
-  A           01
- ?            .. ← output
-A ← flip x    01
-\             / 
-?               
-\              /
+      G 
+     /I/ ← begin merge; x' = 2x
+   I   H
+ / \  
+      
+      
+      
+      
+      ← merged
+   J
+   R ← magnify x
+   \      ⬐ now x' = -2x
+   J       1.1 \ ← output
+    R      0.0\ 
+               \G  
+              \g     ← alternative merge device
+                  H   \H
+                     gI
+                    G \    
+                              
+                       I      J\J
+ \                             /
