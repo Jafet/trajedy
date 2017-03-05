@@ -10,6 +10,7 @@
 #include <deque>
 #include <fstream>
 #include <gmpxx.h>
+#include <iomanip>
 #include <iostream>
 #include <locale>
 #include <sstream>
@@ -24,6 +25,7 @@
 #include <gtkmm/entry.h>
 #include <gtkmm/layout.h>
 #include <gtkmm/paned.h>
+#include <gtkmm/radiobutton.h>
 #include <gtkmm/separator.h>
 #include <gtkmm/scrolledwindow.h>
 #include <gtkmm/textview.h>
@@ -339,6 +341,7 @@ struct MainWindow: Gtk::Window {
      * Layout:
      * The window is split into a control panel (left) and display (right).
      * The control panel steps the program and adjusts settings.
+     * It also displays debugging information, such as pointer coords.
      * The display area shows the program area (top) and I/O buffers (bottom).
      *
      * +----------+-------------------------+
@@ -355,6 +358,7 @@ struct MainWindow: Gtk::Window {
     Gtk::Paned display_panels;
     Gtk::Paned buffer_panels;
 
+    // Stop/run controls.
     Gtk::Box control_bar;
     // dynamic label, set by update_step_counter
     Gtk::Label control_bar_label;
@@ -365,17 +369,35 @@ struct MainWindow: Gtk::Window {
     Gtk::ToggleButton run;
     Gtk::Separator control_bar_hsep;
 
+    // Control running speed.
     double run_delay; // seconds
     Gtk::Box run_delay_bar;
     Gtk::Label run_delay_label;
     Gtk::Entry run_delay_entry; // display in milliseconds
     Gtk::Label run_delay_unit;
+    Gtk::Separator run_delay_hsep;
+
+    // Show/set pointer coordinates.
+    Gtk::Box pointer_info_mode_bar;
+    Gtk::Label pointer_info_mode_label;
+    // Fractions; mixed fractions (most useful); decimal approximations
+    Gtk::RadioButtonGroup pointer_info_mode_button_group;
+    Gtk::RadioButton pointer_info_mode_fullfrac;
+    Gtk::RadioButton pointer_info_mode_mixedfrac;
+    Gtk::RadioButton pointer_info_mode_decimal;
+    Gtk::Box pointer_position_bar;
+    Gtk::Label pointer_position_label;
+    Gtk::Entry pointer_x_field, pointer_y_field;
+    Gtk::Box pointer_direction_bar;
+    Gtk::Label pointer_direction_label;
+    Gtk::Entry pointer_dx_field, pointer_dy_field;
 
     // NB: needed by program_area constructor
     Gtk::ScrolledWindow program_area_scroll;
     ProgramView program_area;
     TState state0; // reset target
 
+    // Input/output buffers.
     Gtk::Box input_view_box;
     Gtk::Label input_view_label;
     Gtk::ScrolledWindow input_view_scroll;
@@ -392,6 +414,7 @@ struct MainWindow: Gtk::Window {
     std::function <void(void)> update_input_buffer, update_output_buffer;
     // Helpers to step the program and update the GUI
     std::function <bool(void)> step_program, unstep_program;
+    std::function <void(void)> update_pointer_info;
     // Handle to stop running program in background
     sigc::connection background_runner;
 
@@ -416,6 +439,17 @@ struct MainWindow: Gtk::Window {
         run_delay_bar {Gtk::ORIENTATION_HORIZONTAL, 5},
         run_delay_label {"Step delay"},
         run_delay_unit {"ms"},
+
+        pointer_info_mode_bar {Gtk::ORIENTATION_HORIZONTAL, 5},
+        pointer_info_mode_label {"Value format:"},
+        pointer_info_mode_fullfrac  {pointer_info_mode_button_group, "fraction"},
+        pointer_info_mode_mixedfrac {pointer_info_mode_button_group, "offset"},
+        pointer_info_mode_decimal   {pointer_info_mode_button_group, "decimal"},
+
+        pointer_position_bar {Gtk::ORIENTATION_HORIZONTAL, 5},
+        pointer_position_label {"Position"},
+        pointer_direction_bar {Gtk::ORIENTATION_HORIZONTAL, 5},
+        pointer_direction_label {"Direction"},
 
         program_area {
             state,
@@ -495,6 +529,22 @@ struct MainWindow: Gtk::Window {
                      Glib::ustring::format(program_area.debug_state.undos.size())));
         };
 
+        update_pointer_info = [&]() -> void {
+            const TPointer& ptr = program_area.debug_state.state.ptr;
+            CoordFormat fmt = CoordFormat::MixedFrac;
+            if (pointer_info_mode_fullfrac.get_active()) {
+                fmt = CoordFormat::FullFrac;
+            } else if (pointer_info_mode_mixedfrac.get_active()) {
+                fmt = CoordFormat::MixedFrac;
+            } else if (pointer_info_mode_decimal.get_active()) {
+                fmt = CoordFormat::Decimal;
+            }
+            pointer_x_field.set_text(print_coordinate(ptr.position.x, fmt));
+            pointer_y_field.set_text(print_coordinate(ptr.position.y, fmt));
+            pointer_dx_field.set_text(print_coordinate(ptr.direction.x, fmt));
+            pointer_dy_field.set_text(print_coordinate(ptr.direction.y, fmt));
+        };
+
         step_program = [&]() -> bool {
             if (program_area.debug_state.state.ptr.is_along_edge() ||
                 (!program_area.debug_state.state.pointer_in_range() &&
@@ -514,6 +564,7 @@ struct MainWindow: Gtk::Window {
                 update_output_buffer();
             }
             update_step_counter();
+            update_pointer_info();
             program_area.queue_draw();
             return true;
         };
@@ -532,6 +583,7 @@ struct MainWindow: Gtk::Window {
                 update_output_buffer();
             }
             update_step_counter();
+            update_pointer_info();
             program_area.queue_draw();
             return true;
         };
@@ -562,6 +614,7 @@ struct MainWindow: Gtk::Window {
                 update_input_buffer();
                 update_output_buffer();
                 update_step_counter();
+                update_pointer_info();
                 program_area.queue_draw();
 
                 // ensure paused
@@ -638,6 +691,7 @@ struct MainWindow: Gtk::Window {
         run_delay_entry.set_input_purpose(Gtk::INPUT_PURPOSE_NUMBER);
         run_delay_bar.pack_start(run_delay_unit, Gtk::PACK_SHRINK);
         control_panels.pack_start(run_delay_bar, Gtk::PACK_SHRINK);
+        control_panels.pack_start(run_delay_hsep, Gtk::PACK_SHRINK);
 
         run_delay_entry.set_text(Glib::ustring::format(run_delay * 1000));
         auto update_run_delay = [&]() {
@@ -675,6 +729,46 @@ struct MainWindow: Gtk::Window {
                 return true;
             });
         run_delay_entry.signal_activate().connect(update_run_delay);
+
+
+        // Pointer coordinates
+        pointer_info_mode_bar.pack_start(pointer_info_mode_label, Gtk::PACK_SHRINK);
+        pointer_info_mode_bar.pack_start(pointer_info_mode_fullfrac, Gtk::PACK_SHRINK);
+        pointer_info_mode_bar.pack_start(pointer_info_mode_mixedfrac, Gtk::PACK_SHRINK);
+        pointer_info_mode_bar.pack_start(pointer_info_mode_decimal, Gtk::PACK_SHRINK);
+        control_panels.pack_start(pointer_info_mode_bar, Gtk::PACK_SHRINK);
+
+        pointer_position_bar.pack_start(pointer_position_label, Gtk::PACK_SHRINK);
+        pointer_position_bar.pack_start(pointer_x_field, Gtk::PACK_EXPAND_WIDGET);
+        pointer_position_bar.pack_start(pointer_y_field, Gtk::PACK_EXPAND_WIDGET);
+        control_panels.pack_start(pointer_position_bar, Gtk::PACK_SHRINK);
+        pointer_x_field.set_width_chars(8);
+        pointer_y_field.set_width_chars(8);
+
+        pointer_direction_bar.pack_start(pointer_direction_label, Gtk::PACK_SHRINK);
+        pointer_direction_bar.pack_start(pointer_dx_field, Gtk::PACK_EXPAND_WIDGET);
+        pointer_direction_bar.pack_start(pointer_dy_field, Gtk::PACK_EXPAND_WIDGET);
+        control_panels.pack_start(pointer_direction_bar, Gtk::PACK_SHRINK);
+        pointer_dx_field.set_width_chars(8);
+        pointer_dy_field.set_width_chars(8);
+
+        pointer_info_mode_fullfrac.signal_clicked().connect
+            ([&]() {
+                update_pointer_info();
+            });
+        pointer_info_mode_mixedfrac.signal_clicked().connect
+            ([&]() {
+                update_pointer_info();
+            });
+        pointer_info_mode_decimal.signal_clicked().connect
+            ([&]() {
+                update_pointer_info();
+            });
+        // populate
+        pointer_info_mode_mixedfrac.set_active();
+
+        // TODO
+        //pointer_x_field.signal_activate().connect()
 
         // Display panel
         display_panels.pack1(program_area_scroll, Gtk::EXPAND);
@@ -743,6 +837,116 @@ struct MainWindow: Gtk::Window {
 
         add(main_panels);
         show_all_children();
+    }
+
+    // Helpers for dealing with pointer coordinates
+    enum class CoordFormat {
+        FullFrac,
+        MixedFrac,
+        Decimal,
+    };
+    static Glib::ustring print_coordinate(const mpq_class& x, CoordFormat format) {
+        switch (format) {
+        case CoordFormat::FullFrac:
+            return x.get_num().get_str() + "/" + x.get_den().get_str();
+        case CoordFormat::MixedFrac:
+            {
+                mpz_class& num = const_cast <mpq_class&> (x).get_num();
+                mpz_class& den = const_cast <mpq_class&> (x).get_den();
+                mpz_class quot, rem;
+                mpz_tdiv_qr(quot.get_mpz_t(), rem.get_mpz_t(), num.get_mpz_t(), den.get_mpz_t());
+                Glib::ustring s = quot.get_str();
+                if (rem != 0) {
+                    mpz_abs(rem.get_mpz_t(), rem.get_mpz_t());
+                    s += ' ';
+                    s += rem.get_str();
+                    s += '/';
+                    s += den.get_str();
+                }
+                return s;
+            }
+        case CoordFormat::Decimal:
+            {
+                // TODO: use scientific notation
+                const unsigned digits = 6; // TODO make this a parameter
+                mpz_class& num = const_cast <mpq_class&> (x).get_num();
+                mpz_class& den = const_cast <mpq_class&> (x).get_den();
+                mpz_class quot = 10, rem;
+                mpz_pow_ui(quot.get_mpz_t(), quot.get_mpz_t(), digits);
+                quot *= num;
+                mpz_tdiv_qr(quot.get_mpz_t(), rem.get_mpz_t(), quot.get_mpz_t(), den.get_mpz_t());
+                Glib::ustring s = Glib::ustring::format
+                    (std::setfill(L'0'), std::setw(digits + 1), quot.get_str());
+                s.insert(s.size() - digits, ".");
+                if (rem != 0) {
+                    s += "...";
+                }
+                return s;
+            }
+        default:
+            assert (false);
+        }
+    }
+    static bool parse_coordinate(Glib::ustring s, mpq_class& x) {
+        if (!s.is_ascii()) {
+            return false;
+        }
+        try {
+            if (s.find('.') != Glib::ustring::npos) {
+                // assume decimal
+                // strip trailing space
+                while (!s.empty() && s[s.size() - 1] == ' ') {
+                    s.erase(s.size() - 1);
+                }
+                // if value is inexact, don't use it
+                if (s.size() >= 3 && s.substr(s.size() - 3) == "...") {
+                    return false;
+                }
+                mpf_class x_tmp {s};
+                x = x_tmp;
+            } else {
+                std::size_t i = 0;
+                for (; i < s.size(); ++i) {
+                    if (!std::isspace(s[i])) {
+                        break;
+                    }
+                }
+                std::size_t num_start = i;
+                for (; i < s.size(); ++i) {
+                    if (!(s[i] == '-' || s[i] == '+' || std::isdigit(s[i]))) {
+                        break;
+                    }
+                }
+                std::size_t num_end = i;
+                mpz_class num {s.substr(num_start, num_end - num_start)};
+                for (; i < s.size(); ++i) {
+                    if (!std::isspace(s[i])) {
+                        break;
+                    }
+                }
+                if (i == s.size()) {
+                    // value is integer
+                    x.get_num().swap(num);
+                    x.get_den() = 1;
+                    x.canonicalize();
+                    return true;
+                } else if (s[i] == '/') {
+                    // fraction
+                    mpz_class den{s.substr(i + 1)};
+                    x.get_num().swap(num);
+                    x.get_den().swap(den);
+                    x.canonicalize();
+                } else {
+                    // mixed fraction
+                    mpq_class rest{s.substr(i + 1)};
+                    x = rest;
+                    x += num;
+                }
+            }
+        } catch(std::invalid_argument&) {
+            return false;
+        }
+        return true;
     }
 };
 
